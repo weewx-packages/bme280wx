@@ -8,18 +8,9 @@ import syslog
 import weewx
 from weewx.engine import StdService
 import weeutil
+import logging
 
-def logmsg(level, msg):
-    syslog.syslog(level, 'bme280: %s' % msg)
-
-def logdbg(msg):
-    logmsg(syslog.LOG_DEBUG, msg)
-
-def loginf(msg):
-    logmsg(syslog.LOG_INFO, msg)
-
-def logerr(msg):
-    logmsg(syslog.LOG_ERR, msg)
+log = logging.getLogger(__name__)
 
 def surely_a_list(innie):
     if isinstance(innie, list):
@@ -35,7 +26,7 @@ class Bme280wx(StdService):
       # Initialize my superclass first:
       super(Bme280wx, self).__init__(engine, config_dict)
       self.bme280_dict = config_dict.get('Bme280wx', {})
-      loginf('bme280wx configuration %s' % self.bme280_dict)
+      log.info('bme280wx configuration %s' % self.bme280_dict)
 
       self.port = int(self.bme280_dict.get('i2c_port', '1'))
       self.address = int(self.bme280_dict.get('i2c_address', '0x76'), base=16)
@@ -60,9 +51,9 @@ class Bme280wx(StdService):
       # if you change the bme280 sensor part; each one is unique
       self.calibration_params = bme280.load_calibration_params(self.bus, self.address)
 
-      loginf('I2C port: %s' % self.port)
-      loginf('I2C address: %s' % hex(self.address))
-      loginf('fallback default units: %s' % weewx.units.unit_nicknames[self.default_units])
+      log.info('I2C port: %s' % self.port)
+      log.info('I2C address: %s' % hex(self.address))
+      log.info('fallback default units: %s' % weewx.units.unit_nicknames[self.default_units])
 
       # This is last to make sure all the other stuff is ready to go
       # (avoid race condition)
@@ -75,7 +66,7 @@ class Bme280wx(StdService):
         # the sample method will take a single reading and return a
         # compensated_reading object
         bme280data = bme280.sample(self.bus, self.address, self.calibration_params)
-        loginf('BME280 data %s' % bme280data)
+        log.info('BME280 data %s' % bme280data)
 
         if bme280data is None:
             return
@@ -104,4 +95,4 @@ class Bme280wx(StdService):
             for key in self.humidityKeys:
                 packet[key] = converted[0]
 
-        logdbg(packet)
+        log.debug(packet)
