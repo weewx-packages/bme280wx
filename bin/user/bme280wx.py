@@ -10,6 +10,8 @@ from weewx.engine import StdService
 import weeutil
 import logging
 
+VERSION = "1.0"
+
 try:
     # Test for new-style weewx logging by trying to import weeutil.logger
     import weeutil.logger
@@ -30,7 +32,7 @@ except ImportError:
     import syslog
 
     def logmsg(level, msg):
-        syslog.syslog(level, 'windy: %s' % msg)
+        syslog.syslog(level, 'bme280: %s' % msg)
 
     def logdbg(msg):
         logmsg(syslog.LOG_DEBUG, msg)
