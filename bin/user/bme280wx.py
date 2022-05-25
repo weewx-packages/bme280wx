@@ -66,7 +66,7 @@ class Bme280wx(StdService):
         # the sample method will take a single reading and return a
         # compensated_reading object
         bme280data = bme280.sample(self.bus, self.address, self.calibration_params)
-        log.info('BME280 data %s' % bme280data)
+        log.debug('BME280 data %s' % bme280data)
 
         if bme280data is None:
             return
