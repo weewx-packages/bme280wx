@@ -10,7 +10,37 @@ from weewx.engine import StdService
 import weeutil
 import logging
 
-log = logging.getLogger(__name__)
+try:
+    # Test for new-style weewx logging by trying to import weeutil.logger
+    import weeutil.logger
+    import logging
+    log = logging.getLogger(__name__)
+
+    def logdbg(msg):
+        log.debug(msg)
+
+    def loginf(msg):
+        log.info(msg)
+
+    def logerr(msg):
+        log.error(msg)
+
+except ImportError:
+    # Old-style weewx logging
+    import syslog
+
+    def logmsg(level, msg):
+        syslog.syslog(level, 'windy: %s' % msg)
+
+    def logdbg(msg):
+        logmsg(syslog.LOG_DEBUG, msg)
+
+    def loginf(msg):
+        logmsg(syslog.LOG_INFO, msg)
+
+    def logerr(msg):
+        logmsg(syslog.LOG_ERR, msg)
+
 
 def surely_a_list(innie):
     if isinstance(innie, list):
@@ -51,9 +81,9 @@ class Bme280wx(StdService):
       # if you change the bme280 sensor part; each one is unique
       self.calibration_params = bme280.load_calibration_params(self.bus, self.address)
 
-      log.info('I2C port: %s' % self.port)
-      log.info('I2C address: %s' % hex(self.address))
-      log.info('fallback default units: %s' % weewx.units.unit_nicknames[self.default_units])
+      loginf('I2C port: %s' % self.port)
+      loginf('I2C address: %s' % hex(self.address))
+      loginf('fallback default units: %s' % weewx.units.unit_nicknames[self.default_units])
 
       # This is last to make sure all the other stuff is ready to go
       # (avoid race condition)
@@ -66,7 +96,7 @@ class Bme280wx(StdService):
         # the sample method will take a single reading and return a
         # compensated_reading object
         bme280data = bme280.sample(self.bus, self.address, self.calibration_params)
-        log.debug('BME280 data %s' % bme280data)
+        logdbg('BME280 data %s' % bme280data)
 
         if bme280data is None:
             return
@@ -95,4 +125,4 @@ class Bme280wx(StdService):
             for key in self.humidityKeys:
                 packet[key] = converted[0]
 
-        log.debug(packet)
+        logdbg(packet)
