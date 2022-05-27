@@ -10,7 +10,7 @@ from weewx.engine import StdService
 import weeutil
 import logging
 
-VERSION = "1.0"
+VERSION = "1.01"
 
 try:
     # Test for new-style weewx logging by trying to import weeutil.logger
