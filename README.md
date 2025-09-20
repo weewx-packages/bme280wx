@@ -22,7 +22,7 @@ If you are using a BMP085, do yourself a favor and get a BME280.
 
 ## Installation
 ### Pre-requisites
-* [weewx](https://weewx.com). Should work with any recent version. Tested with weewx 3.9.1 and 4.1.0.
+* [weewx](https://weewx.com). Should work with any recent version. Tested with weewx 3.9.1, 4.1.0 and 5.1.0.
 * python 2.7 or python 3.x. You will already have a suitable python version if you are running weewx.
 * [RPi.bme280](https://pypi.org/project/RPi.bme280/) python interface to the BME280 for a Raspberry Pi.
   The page at that link is also a great guide for wiring up your sensor if that's a new area for you.
@@ -30,16 +30,24 @@ If you are using a BMP085, do yourself a favor and get a BME280.
 * NOTE: If you are running weewx inside a Docker container, you must expose your I2C device 
   (`/dev/i2c-0` or `/dev/i2c-1`) to that container.
 
-Download the compressed archive https://gitlab.com/wjcarpenter/bme280wx/-/archive/master/bme280wx-master.zip of this project to any convenient temporary directory.
+Download the compressed archive https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip of this project to any convenient temporary directory.
 
 Run the extensions installer:
 ```
 wee_extension --install bme280wx-master.zip
 ```
+With weewx 5.0 onwards you must use:
+```
+weectl extension install https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip
+```
 Restart weewx using these steps or your favorite local variant:
 ```
 sudo /etc/init.d/weewx stop
 sudo /etc/init.d/weewx start
+```
+If you're using systemd:
+```
+sudo systemctl restart weewx.service
 ```
 It's OK to delete the downloaded file after installation.
 You will not need it for uninstalling the extension, but, of course, you will need it to re-install.
@@ -50,10 +58,18 @@ To uninstall this extension, use the extensions installer:
 ```
 wee_extension --uninstall bme280wx
 ```
+For weewx 5.0:
+```
+weectl extension uninstall bme280wx
+```
 Restart weewx using these steps or your favorite local variant:
 ```
 sudo /etc/init.d/weewx stop
 sudo /etc/init.d/weewx start
+```
+If you're using systemd:
+```
+sudo systemctl restart weewx.service
 ```
 ## Upgrade
 If you want to upgrade to a newer version of this extension,
