@@ -1,6 +1,7 @@
+# Modified 2026-10-22: use the WeeWX 5 installer.
 # installer for bme280wx extension
 
-from setup import ExtensionInstaller
+from weecfg.extension import ExtensionInstaller
 
 def loader():
     return Bme280wxInstaller()
@@ -8,7 +9,7 @@ def loader():
 class Bme280wxInstaller(ExtensionInstaller):
     def __init__(self):
         super(Bme280wxInstaller, self).__init__(
-            version="1.0",
+            version="1.1.0",
             name='bme280wx',
             description='Add bme280 sensor readings to loop packet data',
             author="WJCarpenter",

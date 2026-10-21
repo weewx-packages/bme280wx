@@ -1,3 +1,4 @@
+# Modified 2026-10-22: optional sample logging, I2C recovery and bus shutdown.
 #!/usr/bin/env python
 """
 bme280wx
@@ -7,24 +8,48 @@ import bme280
 import syslog
 import weewx
 from weewx.engine import StdService
-import weeutil
+import weeutil.weeutil
+import weewx.units
+import logging
 
-def logmsg(level, msg):
-    syslog.syslog(level, 'bme280: %s' % msg)
+VERSION = "1.1.0"
 
-def logdbg(msg):
-    logmsg(syslog.LOG_DEBUG, msg)
+try:
+    # Test for new-style weewx logging by trying to import weeutil.logger
+    import weeutil.logger
+    import logging
+    log = logging.getLogger(__name__)
 
-def loginf(msg):
-    logmsg(syslog.LOG_INFO, msg)
+    def logdbg(msg):
+        log.debug(msg)
 
-def logerr(msg):
-    logmsg(syslog.LOG_ERR, msg)
+    def loginf(msg):
+        log.info(msg)
+
+    def logerr(msg):
+        log.error(msg)
+
+except ImportError:
+    # Old-style weewx logging
+    import syslog
+
+    def logmsg(level, msg):
+        syslog.syslog(level, 'bme280: %s' % msg)
+
+    def logdbg(msg):
+        logmsg(syslog.LOG_DEBUG, msg)
+
+    def loginf(msg):
+        logmsg(syslog.LOG_INFO, msg)
+
+    def logerr(msg):
+        logmsg(syslog.LOG_ERR, msg)
+
 
 def surely_a_list(innie):
     if isinstance(innie, list):
         return innie
-    if innie is None or innie is "":
+    if innie is None or innie == "":
         return []
     return [innie] # cross fingers
 
@@ -35,7 +60,8 @@ class Bme280wx(StdService):
       # Initialize my superclass first:
       super(Bme280wx, self).__init__(engine, config_dict)
       self.bme280_dict = config_dict.get('Bme280wx', {})
-      loginf('bme280wx configuration %s' % self.bme280_dict)
+      self.debug = weeutil.weeutil.to_bool(self.bme280_dict.get('debug', weewx.debug))
+      loginf('bme280wx service version %s' % VERSION)
 
       self.port = int(self.bme280_dict.get('i2c_port', '1'))
       self.address = int(self.bme280_dict.get('i2c_address', '0x76'), base=16)
@@ -74,8 +100,13 @@ class Bme280wx(StdService):
 
         # the sample method will take a single reading and return a
         # compensated_reading object
-        bme280data = bme280.sample(self.bus, self.address, self.calibration_params)
-        loginf('BME280 data %s' % bme280data)
+        try:
+            bme280data = bme280.sample(self.bus, self.address, self.calibration_params)
+        except OSError as e:
+            logerr('BME280 sample failed: %s' % e)
+            return
+        if self.debug:
+            logdbg('BME280 data %s' % bme280data)
 
         if bme280data is None:
             return
@@ -104,4 +135,8 @@ class Bme280wx(StdService):
             for key in self.humidityKeys:
                 packet[key] = converted[0]
 
-        logdbg(packet)
+        if self.debug:
+            logdbg(packet)
+
+    def shutDown(self):
+        self.bus.close()

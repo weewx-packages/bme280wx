@@ -22,7 +22,7 @@ If you are using a BMP085, do yourself a favor and get a BME280.
 
 ## Installation
 ### Pre-requisites
-* [weewx](https://weewx.com). Should work with any recent version. Tested with weewx 3.9.1 and 4.1.0.
+* [weewx](https://weewx.com). Should work with any recent version. Tested with weewx 3.9.1, 4.1.0 and 5.1.0.
 * python 2.7 or python 3.x. You will already have a suitable python version if you are running weewx.
 * [RPi.bme280](https://pypi.org/project/RPi.bme280/) python interface to the BME280 for a Raspberry Pi.
   The page at that link is also a great guide for wiring up your sensor if that's a new area for you.
@@ -30,16 +30,24 @@ If you are using a BMP085, do yourself a favor and get a BME280.
 * NOTE: If you are running weewx inside a Docker container, you must expose your I2C device 
   (`/dev/i2c-0` or `/dev/i2c-1`) to that container.
 
-Download the compressed archive https://gitlab.com/wjcarpenter/bme280wx/-/archive/master/bme280wx-master.zip of this project to any convenient temporary directory.
+Download the compressed archive https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip of this project to any convenient temporary directory.
 
 Run the extensions installer:
 ```
-wee_extension --install bme280wx-master.zip
+weectl extension install bme280wx-1.1.0.zip
+```
+With weewx 5.0 onwards you must use:
+```
+weectl extension install https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip
 ```
 Restart weewx using these steps or your favorite local variant:
 ```
 sudo /etc/init.d/weewx stop
 sudo /etc/init.d/weewx start
+```
+If you're using systemd:
+```
+sudo systemctl restart weewx.service
 ```
 It's OK to delete the downloaded file after installation.
 You will not need it for uninstalling the extension, but, of course, you will need it to re-install.
@@ -48,12 +56,20 @@ You will not need it for uninstalling the extension, but, of course, you will ne
 
 To uninstall this extension, use the extensions installer:
 ```
-wee_extension --uninstall bme280wx
+weectl extension uninstall bme280wx
+```
+For weewx 5.0:
+```
+weectl extension uninstall bme280wx
 ```
 Restart weewx using these steps or your favorite local variant:
 ```
 sudo /etc/init.d/weewx stop
 sudo /etc/init.d/weewx start
+```
+If you're using systemd:
+```
+sudo systemctl restart weewx.service
 ```
 ## Upgrade
 If you want to upgrade to a newer version of this extension,
@@ -135,3 +151,31 @@ The configuration items have the following meanings:
 After making any configuration changes, you must restart weewx.
 Be sure to also have a look at the system log to see that weewx started properly.
 Mistakes in configuration can lead to unrecoverable errors that prompt weewx to shut down.
+
+
+## Independent continuation
+
+This repository continues https://gitlab.com/wjcarpenter/bme280wx from
+b897cfc3ce2c1b981d33ef93d76d80f280c47289, retaining full history and BSD-2-Clause
+license. It is maintained separately. The logging contribution in upstream MR !2
+is preserved through commit 859eb1cebabf8c36924f27bb169b896a8802c5d8.
+
+Version 1.1.0 uses the WeeWX 5 installer. Sample logging follows the optional
+`[Bme280wx] debug` setting, which defaults to WeeWX's debug setting. Debug
+messages also require a logger configured to emit DEBUG records. Normal
+operation logs startup information without one sample message per loop packet.
+Temporary I2C read failures leave the loop packet unchanged and log an error.
+Shutdown closes the I2C bus.
+
+### Keep your station driver
+
+Bme280wx is a data service, not a station driver. Keep `[Station] station_type`
+set to your existing weather station, or `Simulator` for an isolated test.
+The installer registers `user.bme280wx.Bme280wx` in `[Engine][[Services]]`
+`data_services` and adds `[Bme280wx]`. Do not set `station_type = BME280wx`.
+That setting asks WeeWX to load a driver from a different, case-sensitive
+section and reproduces the `KeyError: BME280wx` in upstream issue #2.
+
+Tests use a local fake I2C bus and sensor samples with the real WeeWX unit
+converters for US, METRIC and METRICWX. Physical I2C wiring, calibration and
+sensor accuracy require the operator's device and are not verified by these tests.
