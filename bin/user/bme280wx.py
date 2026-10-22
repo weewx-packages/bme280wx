@@ -12,7 +12,7 @@ import weeutil.weeutil
 import weewx.units
 import logging
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 try:
     # Test for new-style weewx logging by trying to import weeutil.logger

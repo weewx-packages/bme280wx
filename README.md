@@ -30,15 +30,15 @@ If you are using a BMP085, do yourself a favor and get a BME280.
 * NOTE: If you are running weewx inside a Docker container, you must expose your I2C device 
   (`/dev/i2c-0` or `/dev/i2c-1`) to that container.
 
-Download the compressed archive https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip of this project to any convenient temporary directory.
+Download the compressed archive https://github.com/weewx-packages/bme280wx/releases/download/v1.1.1/bme280wx-1.1.1.zip of this project to any convenient temporary directory.
 
 Run the extensions installer:
 ```
-weectl extension install bme280wx-1.1.0.zip
+weectl extension install bme280wx-1.1.1.zip
 ```
 With weewx 5.0 onwards you must use:
 ```
-weectl extension install https://gitlab.com/mfraz74/bme280wx/-/archive/master/bme280wx-master.zip
+weectl extension install https://github.com/weewx-packages/bme280wx/releases/download/v1.1.1/bme280wx-1.1.1.zip
 ```
 Restart weewx using these steps or your favorite local variant:
 ```
@@ -160,7 +160,7 @@ b897cfc3ce2c1b981d33ef93d76d80f280c47289, retaining full history and BSD-2-Claus
 license. It is maintained separately. The logging contribution in upstream MR !2
 is preserved through commit 859eb1cebabf8c36924f27bb169b896a8802c5d8.
 
-Version 1.1.0 uses the WeeWX 5 installer. Sample logging follows the optional
+Version 1.1.1 provides a versioned continuation download and uses the WeeWX 5 installer. Sample logging follows the optional
 `[Bme280wx] debug` setting, which defaults to WeeWX's debug setting. Debug
 messages also require a logger configured to emit DEBUG records. Normal
 operation logs startup information without one sample message per loop packet.
