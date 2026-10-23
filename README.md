@@ -2,68 +2,57 @@
 
 _Copyright (c) 2019, WJCarpenter_
 
-Bme280wx adds temperature, station pressure and relative humidity from a Bosch
-BME280 over I2C to an existing WeeWX station's LOOP packets. This independent
-continuation maintains version 1.1.1 for Python 3.10–3.14 and
-WeeWX 5.5.2–5.6. Keep your existing station driver.
+bme280wx adds temperature, station pressure and relative humidity from a Bosch
+BME280 sensor to the LOOP packets of an existing WeeWX station. It is a data
+service, not a station driver: your station driver stays in place. It reads
+the sensor over I2C only, also on breakout boards that offer SPI.
 
-## Install
+Independent continuation of
+[wjcarpenter/bme280wx](https://gitlab.com/wjcarpenter/bme280wx), with its full
+history. The logging contribution from upstream MR !2 is preserved in commit
+`859eb1c`.
 
-For a pip installation, activate the existing virtual environment that runs
-your WeeWX service before running these commands. Both `python` and `weectl`
-must come from that environment. For a distribution package installation, use
-its `weectl`, with `sudo` if required. Add `--config /path/to/weewx.conf` to the
-extension command when your station configuration is not found automatically.
+## Requirements
 
-If WeeWX uses the system Python, install `RPi.bme280` and `smbus2` through
-your distribution if available. Otherwise install WeeWX in a virtual
-environment first, then follow the pip instructions here.
+- A BME280 on an I2C bus of a Linux host, for example a Raspberry Pi, with
+  I2C enabled. See [RPi.bme280](https://pypi.org/project/RPi.bme280/) for
+  wiring, and
+  [Adafruit's Configuring I2C](https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c)
+  for enabling the bus.
+- Read and write access for the WeeWX user to the bus device `/dev/i2c-N`. In
+  a container, pass that device through.
+- The Python packages `RPi.bme280` and `smbus2` in the Python environment
+  running WeeWX:
 
-Enable I2C on the Raspberry Pi and give the WeeWX account access to its I2C
-bus. Install `RPi.bme280` and `smbus2` in the Python environment running WeeWX:
+  ```sh
+  python -m pip install 'RPi.bme280==0.2.4' 'smbus2>=0.6.1,<1'
+  ```
 
-```sh
-python -m pip install 'RPi.bme280==0.2.4' 'smbus2>=0.6.1,<1'
-```
+  If WeeWX runs on the system Python from a distribution package, install
+  them with the distribution's package manager where it has them.
 
-In a container, expose the corresponding `/dev/i2c-*` device. The extension
-uses I2C, including on breakout boards that also offer SPI. See
-[RPi.bme280](https://pypi.org/project/RPi.bme280/) for wiring information.
+## Installation
 
-Install the published archive with WeeWX 5's extension installer:
+Install `bme280wx` from the [WeeWX packages catalog](https://github.com/weewx-packages/catalog/blob/main/packages/bme280wx.md).
+The catalog page lists the current release, its WeeWX and Python
+requirements, and the install, update and removal commands.
 
-```sh
-weectl extension install https://github.com/weewx-packages/bme280wx/releases/download/v1.1.1/bme280wx-1.1.1.zip
-```
+The installer registers `user.bme280wx.Bme280wx` in `data_services`, copies
+`bin/user/bme280wx.py` and adds the `[Bme280wx]` section below. Check
+`i2c_port` and `i2c_address` before you restart WeeWX. After the restart,
+check the log: the service logs the I2C port and address it uses.
 
-Restart your WeeWX service after configuration, for example
-`sudo systemctl restart weewx` on systemd. The installer does not restart it
-for you.
-
-The installer adds `user.bme280wx.Bme280wx` to `data_services`, copies
-`bme280wx.py` into the station's `bin/user`, and adds `[Bme280wx]`.
-Check `i2c_port` and `i2c_address` in the configuration below before restarting.
-The default temperature and humidity fields are `inTemp` and `inHumidity`.
-Pressure goes into `pressure` only when `outTemp` is present.
-
-## Upgrade or remove
-
-Back up `[Bme280wx]` before upgrading, then install the desired fixed archive.
-To remove, run `weectl extension uninstall bme280wx` and restart WeeWX.
-Uninstallation removes the installed configuration.
-
-## Hardware limits and license
-
-The supported sensor is BME280. BMP280 humidity readings and pressure accuracy
-are not verified; BMP085 is incompatible with these conversions. Physical
-wiring and calibration require checks on your own device. Place the sensor
-away from the Raspberry Pi's heat. The project retains WJCarpenter's
-[BSD-2-Clause license](LICENSE).
+Keep `[Station] station_type` set to your weather station, or to `Simulator`
+for a test. Do not set `station_type = BME280wx`. WeeWX would then look for a
+driver in a section `[BME280wx]` and stop with `KeyError: BME280wx`, as in
+upstream issue #2.
 
 ## Configuration
-Installation will add a default configuration to `/etc/weewx/weewx.conf`:
-```
-# Options for extension 'bme280wx'
+
+What the installer adds to `weewx.conf`. The values are the defaults of the
+code, so removing a line does not change the behaviour:
+
+```ini
 [Bme280wx]
     i2c_port = 1
     i2c_address = 0x76
@@ -75,88 +64,60 @@ Installation will add a default configuration to `/etc/weewx/weewx.conf`:
     humidityKeys = inHumidity
     humidity_must_have = ""
 ```
-(The items might be in a different order, which doesn't matter.)
-There is a good chance that these defaults will work for you as-is.
-You should at least check the values of `i2c_port` and `i2c_address`.
-(If you are unsure how to do that, follow the guidance at [RPi.bme280](https://pypi.org/project/RPi.bme280/)
-or [AdaFruit's Configuring I2C](https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c).)
-These are the same as the defaults in the extension code,
-so simply removing configuration items will not affect the defaults used by the extension.
 
-The configuration items have the following meanings:
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `i2c_port` | `1` | I2C bus number. Most Raspberry Pis use `1`, some early models `0`. |
+| `i2c_address` | `0x76` | Address of the sensor. Read as hexadecimal, with or without `0x`. Many BME280 boards use `0x76`, but not all. |
+| `usUnits` | `US` | Unit system used when the LOOP packet has no `usUnits`: `US`, `METRIC` or `METRICWX`. Otherwise the readings are converted to the packet's unit system. The option does not add `usUnits` to the packet. |
+| `temperatureKeys` | `inTemp` | Packet fields that receive the temperature. |
+| `temperature_must_have` | `""` | Fields that must already be in the packet before the temperature is added. |
+| `pressureKeys` | `pressure` | Packet fields that receive the pressure. |
+| `pressure_must_have` | `outTemp` | Fields that must already be in the packet before the pressure is added. |
+| `humidityKeys` | `inHumidity` | Packet fields that receive the humidity. |
+| `humidity_must_have` | `""` | Fields that must already be in the packet before the humidity is added. |
+| `debug` | WeeWX `debug` | When true, each sample and the resulting packet are logged at debug level. |
 
-* `i2c_port`: The I2C port number. The default is `1`.
-  Most Raspberry Pis use port number `1`, but some early models used port number `0`.
-* `i2c_address`: The address of your BME280 sensor on the I2C interface.
-  The default is `0x76`.
-  This value must be in hex notation, as seen in the example.
-  Most breakout boards use an address of `0x76` for BME280, but it is not guaranteed.
-* `usUnits`: Ordinarily, a weewx loop data packet will contain a `usUnits` key identifying the units system for the values in the packet.
-  The BME280 data will be converted to that units system before being added to the packet.
-  It is possible that the loop data packet will not have the `usUnits` key.
-  In that case, the BME280 data will be converted to the units system from this configuration item.
-  Allowed values are `US` (the default), `METRIC`, or `METRICWX`,
-  which are the units systems understood by weewx.
-  A `usUnits` key with this value will _not_ be added to the weewx loop data packet.
-* `temperatureKeys`: When the BME280 temperature data is added to weewx loop data packets, it will use this key or keys.
-  If you don't want to use this BME280 value, set this to empty string (`""`).
-  The value can be an empty string (meaning, do not add at all), a single item, or a comma-separated list of items.
-  If multiple keys are configured, the same value is used with each key.
-  The default is `inTemp` under the assumption that your Raspberry Pi is running indoors.
-  _You should also make sure your BME280 sensor is at least a few inches away from the Raspberry Pi
-  so that it's not affected by the heat of the running computer._
-* `temperature_must_have`: The BME280 temperature will only be added to the weewx loop data packet if these items are already present in the packet.
-  The value can be an empty string (meaning, no requirements), a single item, or a comma-separated list of items.
-  The default is empty string.
-* `pressureKeys`: When the BME280 pressure data is added to weewx loop data packets, it will use this key or keys.
-  If you don't want to use this BME280 value, set this to empty string (`""`).
-  The value can be an empty string (meaning, do not add at all), a single item, or a comma-separated list of items.
-  If multiple keys are configured, the same value is used with each key.
-  The default is `pressure`. Do _not_ use `barometer`.
-  _This is "station pressure". The weewx software will calculate the MSL "barometric pressure" from this.
-  That calculation depends upon the ambient temperature and the altitude._
-  **Check to make sure that your weewx configuration reflects the altitude of your BME280 sensor, not that of other sensors you may have.**
-* `pressure_must_have`: The BME280 pressure will only be added to the weewx loop data packet if these items are already present in the packet.
-  The value can be an empty string (meaning, no requirements), a single item, or a comma-separated list of items.
-  The default is `outTemp` because the calculation of MSL barometric pressure depends upon the ambient temperature.
-  Although the pressure inside will be the same as the pressure outside, the temperature probably will not be.
-* `humidityKeys`: When the BME280 humidity data is added to weewx loop data packets, it will use this key or keys.
-  If you don't want to use this BME280 value, set this to empty string (`""`).
-  The value can be an empty string (meaning, do not add at all), a single item, or a comma-separated list of items.
-  If multiple keys are configured, the same value is used with each key.
-  The default is `inHumidity`.
-* `humidity_must_have`: The BME280 humidity will only be added to the weewx loop data packet if these items are already present in the packet.
-  The value can be an empty string (meaning, no requirements), a single item, or a comma-separated list of items.
-  The default is empty string.
+Each `...Keys` and `..._must_have` option takes an empty string, one field or
+a comma-separated list. An empty `...Keys` value leaves that reading out. With
+several keys, each gets the same value.
 
-After making any configuration changes, you must restart weewx.
-Be sure to also have a look at the system log to see that weewx started properly.
-Mistakes in configuration can lead to unrecoverable errors that prompt weewx to shut down.
+The pressure is station pressure. Put it in `pressure`, not in `barometer`.
+WeeWX calculates the sea-level barometer from it, using the outside
+temperature and the station altitude. That is why `pressure_must_have`
+defaults to `outTemp`. Check that `[Station] altitude` is the altitude of the
+BME280.
 
+The default `inTemp` assumes the sensor is indoors. Mount it a few inches away
+from the Raspberry Pi, so the computer's heat does not affect it.
 
-## Independent continuation
+Debug messages also need a logger that emits DEBUG records.
 
-This repository continues https://gitlab.com/wjcarpenter/bme280wx from
-b897cfc3ce2c1b981d33ef93d76d80f280c47289, retaining full history and BSD-2-Clause
-license. It is maintained separately. The logging contribution in upstream MR !2
-is preserved through commit 859eb1cebabf8c36924f27bb169b896a8802c5d8.
+## Limitations
 
-Version 1.1.1 provides a versioned continuation download and uses the WeeWX 5 installer. Sample logging follows the optional
-`[Bme280wx] debug` setting, which defaults to WeeWX's debug setting. Debug
-messages also require a logger configured to emit DEBUG records. Normal
-operation logs startup information without one sample message per loop packet.
-Temporary I2C read failures leave the loop packet unchanged and log an error.
-Shutdown closes the I2C bus.
+- When a reading fails with an I/O error, the service logs the error and
+  leaves that LOOP packet unchanged.
+- The calibration data is read once at startup. After swapping the sensor,
+  restart WeeWX.
+- If the bus cannot be opened or the calibration cannot be read at startup,
+  WeeWX logs `Caught OSError` and retries every 10 seconds. Invalid values
+  for `i2c_port`, `i2c_address` or `usUnits` stop WeeWX at startup.
+- The upstream author found that a BMP280 reports a humidity of zero and
+  plausible other readings, which were not verified. A BMP085 gives wrong
+  values.
+- The tests use a fake I2C bus. Wiring, calibration and sensor accuracy are
+  not verified on real hardware.
 
-### Keep your station driver
+## Development
 
-Bme280wx is a data service, not a station driver. Keep `[Station] station_type`
-set to your existing weather station, or `Simulator` for an isolated test.
-The installer registers `user.bme280wx.Bme280wx` in `[Engine][[Services]]`
-`data_services` and adds `[Bme280wx]`. Do not set `station_type = BME280wx`.
-That setting asks WeeWX to load a driver from a different, case-sensitive
-section and reproduces the `KeyError: BME280wx` in upstream issue #2.
+```sh
+python -m pytest -q tests
+```
 
-Tests use a local fake I2C bus and sensor samples with the real WeeWX unit
-converters for US, METRIC and METRICWX. Physical I2C wiring, calibration and
-sensor accuracy require the operator's device and are not verified by these tests.
+Run it in an environment with WeeWX, pytest, `RPi.bme280` and `smbus2`. The
+tests use a fake bus and the WeeWX unit converters for `US`, `METRIC` and
+`METRICWX`.
+
+## License
+
+[BSD-2-Clause](LICENSE), as in the original.
