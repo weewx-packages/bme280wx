@@ -1,83 +1,57 @@
-# [bme280wx](https://gitlab.com/wjcarpenter/bme280wx)
+# bme280wx
+
 _Copyright (c) 2019, WJCarpenter_
-_[This project is licensed under the BSD 2-clause "Simplified" License.](https://gitlab.com/wjcarpenter/bme280wx/blob/master/LICENSE)_
 
-bme280wx is an extension to [weewx weather station software](https://weewx.com).
-It gives the ability to suplement existing station readings with temperature,
-pressure, and humidity readings from a
-[Bosch BME280 integrated environmental sensor](https://www.bosch-sensortec.com/bst/products/all_products/bme280).
-BME280 sensors are widely available in inexpensive and convenient breakout boards from a variety of sources.
-The extension assumes a Raspberry Pi environment, though it should be possible to run in other environments with some python programming work.
-This extension always uses the I2C interface to read from the BME280 sensor.
-Some BME280 sensor breakout boards also provide an SPI interface.
+Bme280wx adds temperature, station pressure and relative humidity from a Bosch
+BME280 over I2C to an existing WeeWX station's LOOP packets. This independent
+continuation maintains version 1.1.1 for Python 3.10–3.14 and
+WeeWX 5.5.2–5.6. Keep your existing station driver.
 
-This interface seems to work correctly for a BMP280 as well,
-if you happen to have one laying around. The humidity reading will be zero.
-The other readings looked right to me,
-but I didn't investigate whether they really were mathematically correct or just close enough.
-It does _not_ work with BMP085.
-The values are way off the mark.
-It might be possible to tweak the conversions somehow, but I didn't explore it.
-If you are using a BMP085, do yourself a favor and get a BME280.
+## Install
 
-## Installation
-### Pre-requisites
-* [weewx](https://weewx.com). Should work with any recent version. Tested with weewx 3.9.1, 4.1.0 and 5.1.0.
-* python 2.7 or python 3.x. You will already have a suitable python version if you are running weewx.
-* [RPi.bme280](https://pypi.org/project/RPi.bme280/) python interface to the BME280 for a Raspberry Pi.
-  The page at that link is also a great guide for wiring up your sensor if that's a new area for you.
-  There are several other python libraries for the BME280, but they are not interchangable.
-* NOTE: If you are running weewx inside a Docker container, you must expose your I2C device 
-  (`/dev/i2c-0` or `/dev/i2c-1`) to that container.
+Enable I2C on the Raspberry Pi and give the WeeWX account access to its I2C
+bus. Install `RPi.bme280` and `smbus2` in the Python environment running WeeWX:
 
-Download the compressed archive https://github.com/weewx-packages/bme280wx/releases/download/v1.1.1/bme280wx-1.1.1.zip of this project to any convenient temporary directory.
-
-Run the extensions installer:
+```sh
+python -m pip install 'RPi.bme280==0.2.4' 'smbus2>=0.6.1,<1'
 ```
-weectl extension install bme280wx-1.1.1.zip
-```
-With weewx 5.0 onwards you must use:
-```
+
+In a container, expose the corresponding `/dev/i2c-*` device. The extension
+uses I2C, including on breakout boards that also offer SPI. See
+[RPi.bme280](https://pypi.org/project/RPi.bme280/) for wiring information.
+
+Install the published archive with WeeWX 5's extension installer:
+
+```sh
 weectl extension install https://github.com/weewx-packages/bme280wx/releases/download/v1.1.1/bme280wx-1.1.1.zip
 ```
-Restart weewx using these steps or your favorite local variant:
-```
-sudo /etc/init.d/weewx stop
-sudo /etc/init.d/weewx start
-```
-If you're using systemd:
-```
-sudo systemctl restart weewx.service
-```
-It's OK to delete the downloaded file after installation.
-You will not need it for uninstalling the extension, but, of course, you will need it to re-install.
 
-## Uninstall
+Use the `weectl` from your WeeWX environment. Add
+`--config /path/to/weewx.conf` when the station configuration is not found
+automatically. Package installations may require `sudo`; activate the WeeWX
+virtual environment for pip installations. Restart your WeeWX service after
+configuration, for example `sudo systemctl restart weewx` on systemd.
+The installer does not restart it for you.
 
-To uninstall this extension, use the extensions installer:
-```
-weectl extension uninstall bme280wx
-```
-For weewx 5.0:
-```
-weectl extension uninstall bme280wx
-```
-Restart weewx using these steps or your favorite local variant:
-```
-sudo /etc/init.d/weewx stop
-sudo /etc/init.d/weewx start
-```
-If you're using systemd:
-```
-sudo systemctl restart weewx.service
-```
-## Upgrade
-If you want to upgrade to a newer version of this extension,
-simply uninstall the old version and install the new version, as noted above.
-However, during the uninstall, the extension manager will remove the configuration settings (described in the next section).
-If you have modified any of them, make a note of them before the uninstall.
-(One easy way to do that is to simply rename the `[Bme280wx]` section to something else.
-That will prevent the extension manager from removing the whole section.)
+The installer adds `user.bme280wx.Bme280wx` to `data_services`, copies
+`bme280wx.py` into the station's `bin/user`, and adds `[Bme280wx]`.
+Check `i2c_port` and `i2c_address` in the configuration below before restarting.
+The default temperature and humidity fields are `inTemp` and `inHumidity`.
+Pressure goes into `pressure` only when `outTemp` is present.
+
+## Upgrade or remove
+
+Back up `[Bme280wx]` before upgrading, then install the desired fixed archive.
+To remove, run `weectl extension uninstall bme280wx` and restart WeeWX.
+Uninstallation removes the installed configuration.
+
+## Hardware limits and license
+
+The supported sensor is BME280. BMP280 humidity readings and pressure accuracy
+are not verified; BMP085 is incompatible with these conversions. Physical
+wiring and calibration require checks on your own device. Place the sensor
+away from the Raspberry Pi's heat. The project retains WJCarpenter's
+[BSD-2-Clause license](LICENSE).
 
 ## Configuration
 Installation will add a default configuration to `/etc/weewx/weewx.conf`:
