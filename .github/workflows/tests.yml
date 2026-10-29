@@ -1,0 +1,15 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    uses: weewx-packages/catalog/.github/workflows/package-tests.yml@main
+    with:
+      pip-packages: 'RPi.bme280==0.2.4 smbus2>=0.6.1,<1'
